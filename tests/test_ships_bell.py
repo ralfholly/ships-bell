@@ -1,5 +1,4 @@
 import unittest
-
 from ships_bell import ShipsBell
 
 class TestShipsBell(unittest.TestCase):

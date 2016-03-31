@@ -4,6 +4,8 @@ import time
 import threading
 import subprocess
 
+MP3_PLAYER_CALL = "mpg321 -q -g 10 {mp3_file}"
+
 class ShipsBell(threading.Thread):
     SECONDS_PER_MINUTE = 60
     MINUTES_PER_HALF_HOUR = 30
@@ -62,12 +64,10 @@ class ShipsBell(threading.Thread):
 
     @staticmethod
     def play_mp3(path):
-        cmd = "mpg321 -q -g {} {}".format(10, path).split()
+        cmd = MP3_PLAYER_CALL.format(mp3_file=path).split()
         subprocess.call(cmd)
 
 if __name__ == "__main__":
     SHIP_BELL = ShipsBell()
     SHIP_BELL.start()
     SHIP_BELL.join()
-
-
