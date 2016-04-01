@@ -1,0 +1,5 @@
+Determine current directory at startup (find *.mp3 under res/ folder)
+Makefile
+Test coverage
+Command-line args for start time and end time
+
