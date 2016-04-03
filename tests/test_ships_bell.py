@@ -3,7 +3,7 @@ from ships_bell import ShipsBell
 
 class TestShipsBell(unittest.TestCase):
     def test_strike_computation(self):
-        sb = ShipsBell()
+        sb = ShipsBell(".")
         # Full hours.
         self.assertEqual((1, 0), sb.compute_strikes(1, 0))
         self.assertEqual((2, 0), sb.compute_strikes(2, 0))
@@ -25,7 +25,7 @@ class TestShipsBell(unittest.TestCase):
         self.assertEqual((0, 1), sb.compute_strikes(0, 30))
 
     def test_sleep_time_computation(self):
-        sb = ShipsBell()
+        sb = ShipsBell(".")
         self.assertAlmostEqual(30.0 / 2.0 * 60.0, sb.compute_sleep_time(30))
         self.assertAlmostEqual(30.0 / 2.0 * 60.0, sb.compute_sleep_time(0))
         self.assertAlmostEqual((30.0 - 22.0) / 2.0 * 60.0, sb.compute_sleep_time(22))
