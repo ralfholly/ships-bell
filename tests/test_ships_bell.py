@@ -1,5 +1,10 @@
 import unittest
+import subprocess
 from ships_bell import ShipsBell
+from ships_bell import handle_args
+from unittest.mock import Mock
+
+#pylint:disable=invalid-name
 
 class TestShipsBell(unittest.TestCase):
     def test_strike_computation(self):
@@ -34,4 +39,122 @@ class TestShipsBell(unittest.TestCase):
         self.assertAlmostEqual(1.0, sb.compute_sleep_time(59))
         self.assertAlmostEqual(60.0, sb.compute_sleep_time(28))
         self.assertAlmostEqual(60.0, sb.compute_sleep_time(58))
+
+    def test_handle_args_no_explicit_args(self):
+        args1 = ["this_script"]
+        sb = handle_args(args1)
+        self.assertEqual(0, sb.start_time)
+        self.assertEqual(24, sb.end_time)
+
+    def test_handle_args_from_to(self):
+        args1 = ["this_script", "--from", "9", "--to", "17"]
+        sb = handle_args(args1)
+        self.assertEqual(9, sb.start_time)
+        self.assertEqual(17, sb.end_time)
+
+    def test_handle_args_bad_cases(self):
+        # Outside 0..24 range.
+        with self.assertRaises(ValueError):
+            _ = handle_args(["this_script", "--from", "99"])
+        with self.assertRaises(ValueError):
+            _ = handle_args(["this_script", "--to", "99"])
+        with self.assertRaises(ValueError):
+            _ = handle_args(["this_script", "--to", "-9"])
+        # 'from' greater or equal to 'to'.
+        with self.assertRaises(ValueError):
+            _ = handle_args(["this_script", "--from", "12", "--to", "9"])
+        # 'from' greater to 'to'.
+        with self.assertRaises(ValueError):
+            _ = handle_args(["this_script", "--from", "13", "--to", "12"])
+
+    def test_step_happy_path(self):
+        sb = ShipsBell(".", 0, 24)
+        sb.play_single_strike = Mock()
+        sb.play_double_strike = Mock()
+
+        # No strike at 11:22.
+        sb.play_single_strike.reset_mock()
+        sb.play_double_strike.reset_mock()
+        sb.step(11, 22)
+        self.assertEqual(0, sb.play_double_strike.call_count)
+        self.assertEqual(0, sb.play_single_strike.call_count)
+
+        # 4 double-strikes at 04:00.
+        sb.play_single_strike.reset_mock()
+        sb.play_double_strike.reset_mock()
+        sb.step(4, 0)
+        self.assertEqual(4, sb.play_double_strike.call_count)
+        self.assertEqual(0, sb.play_single_strike.call_count)
+
+    def test_step_striking_boundary_cases(self):
+        sb = ShipsBell(".", 0, 24)
+        sb.play_single_strike = Mock()
+        sb.play_double_strike = Mock()
+
+        # 4 double-strikes at 00:00.
+        sb.play_single_strike.reset_mock()
+        sb.play_double_strike.reset_mock()
+        sb.step(0, 0)
+        self.assertEqual(4, sb.play_double_strike.call_count)
+        self.assertEqual(0, sb.play_single_strike.call_count)
+
+        # 4 double-strikes at 24:00 (actually 24:00 is impossible)
+        sb.play_single_strike.reset_mock()
+        sb.play_double_strike.reset_mock()
+        sb.step(24, 0)
+        self.assertEqual(4, sb.play_double_strike.call_count)
+        self.assertEqual(0, sb.play_single_strike.call_count)
+
+        # 0 double-strikes, 1 single-strike at 00:30
+        sb.play_single_strike.reset_mock()
+        sb.play_double_strike.reset_mock()
+        sb.step(0, 30)
+        self.assertEqual(0, sb.play_double_strike.call_count)
+        self.assertEqual(1, sb.play_single_strike.call_count)
+
+    def test_mp3_played(self):
+        sb = ShipsBell(".", 0, 24)
+        subprocess.call = Mock()
+
+        subprocess.call.reset_mock()
+        sb.play_single_strike()
+        self.assertEqual(1, subprocess.call.call_count)
+
+        subprocess.call.reset_mock()
+        sb.play_double_strike()
+        self.assertEqual(1, subprocess.call.call_count)
+
+    def test_respect_silent_period(self):
+        sb = ShipsBell(".", 9, 17)
+
+        sb.play_single_strike = Mock()
+        sb.play_double_strike = Mock()
+
+        # No strike at 8:30.
+        sb.play_single_strike.reset_mock()
+        sb.play_double_strike.reset_mock()
+        sb.step(8, 30)
+        self.assertEqual(0, sb.play_double_strike.call_count)
+        self.assertEqual(0, sb.play_single_strike.call_count)
+
+        # No strike at 17:30.
+        sb.play_single_strike.reset_mock()
+        sb.play_double_strike.reset_mock()
+        sb.step(17, 30)
+        self.assertEqual(0, sb.play_double_strike.call_count)
+        self.assertEqual(0, sb.play_single_strike.call_count)
+
+        # Double-strike at 9:00.
+        sb.play_single_strike.reset_mock()
+        sb.play_double_strike.reset_mock()
+        sb.step(9, 0)
+        self.assertEqual(1, sb.play_double_strike.call_count)
+        self.assertEqual(0, sb.play_single_strike.call_count)
+
+        # Double-strike at 17:00.
+        sb.play_single_strike.reset_mock()
+        sb.play_double_strike.reset_mock()
+        sb.step(17, 0)
+        self.assertEqual(1, sb.play_double_strike.call_count)
+        self.assertEqual(0, sb.play_single_strike.call_count)
 

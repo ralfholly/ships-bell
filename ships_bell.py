@@ -26,7 +26,7 @@ class ShipsBell(threading.Thread):
         self.start_time = start
         self.end_time = end
 
-    def run(self):
+    def run(self): # pragma: no cover
         while True:
             current_time = time.localtime()
             minutes = current_time.tm_min
@@ -83,17 +83,17 @@ def handle_args(args):
     from_hour = getattr(parsed_args, "from")
     to_hour = getattr(parsed_args, "to")
     if from_hour < 0 or from_hour > 24 or to_hour < 0 or to_hour > 24:
-        fatal("Hours must be in range 0..24.")
-    if from_hour >= to_hour:
-        fatal("Value of 'to' hour must be greater than value of 'from' hour.")
+        raise ValueError("Hours must be in range 0..24.")
+    if from_hour > to_hour:
+        raise ValueError("Value of 'to' hour must be greater than or equal to value of 'from' hour.")
     return ShipsBell(os.path.dirname(this_script), from_hour, to_hour)
 
-def fatal(msg):
-    print(msg)
-    sys.exit(1)
-
-if __name__ == "__main__":
-    SHIPS_BELL = handle_args(sys.argv)
-    SHIPS_BELL.start()
-    SHIPS_BELL.join()
+if __name__ == "__main__": #pragma: no cover
+    try:
+        SHIPS_BELL = handle_args(sys.argv)
+        SHIPS_BELL.start()
+        SHIPS_BELL.join()
+    except ValueError as e:
+        print(str(e), file=sys.stderr)
+        sys.exit(1)
 
