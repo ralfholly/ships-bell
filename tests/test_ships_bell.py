@@ -1,8 +1,9 @@
 import unittest
-import subprocess
+from unittest.mock import Mock
+from unittest.mock import patch
 from ships_bell import ShipsBell
 from ships_bell import handle_args
-from unittest.mock import Mock
+from ships_bell import ShipsBellError
 
 # Tests may use long method names.
 #pylint:disable=invalid-name
@@ -86,17 +87,26 @@ class TestShipsBell(unittest.TestCase):
         self.assertAlmostEqual(60.0, sb.compute_sleep_time(28))
         self.assertAlmostEqual(60.0, sb.compute_sleep_time(58))
 
-    def test_mp3_played(self):
+    @patch("subprocess.call")
+    def test_mp3_played(self, subprocess_call):
         sb = ShipsBell(".", 0, 24)
-        subprocess.call = Mock()
+        subprocess_call.return_value = 0
 
-        subprocess.call.reset_mock()
+        subprocess_call.reset_mock()
         sb.play_single_strike()
-        self.assertEqual(1, subprocess.call.call_count)
+        self.assertEqual(1, subprocess_call.call_count)
 
-        subprocess.call.reset_mock()
+        subprocess_call.reset_mock()
         sb.play_double_strike()
-        self.assertEqual(1, subprocess.call.call_count)
+        self.assertEqual(1, subprocess_call.call_count)
+
+    @patch("subprocess.call")
+    def test_mp3_playing_error(self, subprocess_call):
+        sb = ShipsBell(".", 0, 24)
+
+        with self.assertRaises(ShipsBellError):
+            subprocess_call.return_value = 1
+            sb.play_single_strike()
 
     def test_respect_silent_period(self):
         sb = ShipsBell(".", 9, 17)
@@ -146,16 +156,16 @@ class TestShipsBell(unittest.TestCase):
 
     def test_handle_args_bad_cases(self):
         # Outside 0..24 range.
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ShipsBellError):
             _ = handle_args(["this_script", "--from", "99"])
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ShipsBellError):
             _ = handle_args(["this_script", "--to", "99"])
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ShipsBellError):
             _ = handle_args(["this_script", "--to", "-9"])
         # 'from' greater or equal to 'to'.
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ShipsBellError):
             _ = handle_args(["this_script", "--from", "12", "--to", "9"])
         # 'from' greater to 'to'.
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ShipsBellError):
             _ = handle_args(["this_script", "--from", "13", "--to", "12"])
 
