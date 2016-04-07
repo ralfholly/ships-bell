@@ -14,6 +14,9 @@ import os
 # If you don't have the 'mpg321' MP3 player, adapt this invocation to your needs.
 MP3_PLAYER_CALL = "mpg321 -q -g 10 {mp3_file}"
 
+class ShipsBellError(Exception):
+    pass
+
 class ShipsBell(threading.Thread):
     SECONDS_PER_MINUTE = 60
     MINUTES_PER_HALF_HOUR = 30
@@ -21,6 +24,7 @@ class ShipsBell(threading.Thread):
 
     def __init__(self, working_dir, start=0, end=24):
         super().__init__()
+        self.daemon = True
         self.working_dir = working_dir
         assert end >= start
         self.start_time = start
@@ -72,7 +76,9 @@ class ShipsBell(threading.Thread):
     @staticmethod
     def play_mp3(path):
         cmd = MP3_PLAYER_CALL.format(mp3_file=path).split()
-        subprocess.call(cmd)
+        exit_code = subprocess.call(cmd)
+        if exit_code != 0:
+            raise ShipsBellError("Failed to play " + path)
 
 def handle_args(args):
     this_script = args[0]
@@ -83,17 +89,21 @@ def handle_args(args):
     from_hour = getattr(parsed_args, "from")
     to_hour = getattr(parsed_args, "to")
     if from_hour < 0 or from_hour > 24 or to_hour < 0 or to_hour > 24:
-        raise ValueError("Hours must be in range 0..24.")
+        raise ShipsBellError("Hours must be in range 0..24.")
     if from_hour > to_hour:
-        raise ValueError("Value of 'to' hour must be greater than or equal to value of 'from' hour.")
+        raise ShipsBellError("Value of 'to' hour must be greater than or equal to value of 'from' hour.")
     return ShipsBell(os.path.dirname(this_script), from_hour, to_hour)
 
 if __name__ == "__main__": #pragma: no cover
+
+    # Now start app.
     try:
         SHIPS_BELL = handle_args(sys.argv)
+        # Play double-strike at startup, mainly to detect a missing MP3 player.
+        SHIPS_BELL.play_double_strike()
         SHIPS_BELL.start()
         SHIPS_BELL.join()
-    except ValueError as e:
+
+    except (FileNotFoundError, ShipsBellError) as e:
         print(str(e), file=sys.stderr)
         sys.exit(1)
-
