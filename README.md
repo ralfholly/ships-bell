@@ -12,13 +12,13 @@ A little Python 3 app that plays the well-known [ship's bell](https://en.wikiped
 ## Basic usage
 ```
 # Show help:
-python3 ./ships_bell --help
+python3 ./ships_bell.py --help
 
 # Bell sounds from 00:00 to 24:00:
-python3 ./ships_bell
+python3 ./ships_bell.py
 
 # No bell sounds before 9:00 and after 20:00:
-python3 ./ships_bell  --from 9 --to 20
+python3 ./ships_bell.py  --from 9 --to 20
 ```
 ## License
 See file LICENSE.
